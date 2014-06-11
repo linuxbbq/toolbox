@@ -1,0 +1,56 @@
+#!/bin/bash
+ROOT_UID=0
+if [ "$UID" -ne "$ROOT_UID" ]
+then
+  echo "You must be root to run this script."
+  exit 87
+fi
+
+saveprofile()
+{
+   echo "Enter name for profile: "
+   read proname
+   echo
+   echo "Saved as /etc/network/net.$proname"
+   cp /etc/network/interfaces /etc/network/net.$proname
+}
+
+loadprofile()
+{
+   ls /etc/network/net.*
+   echo "Enter net. profile to load without prefix: "
+   read proname
+   echo
+   cp /etc/network/interfaces /etc/network/interfaces.backup
+   echo "Current profile saved as /etc/network/interfaces.backup"
+   cp /etc/network/net.$proname /etc/network/interfaces
+   # The next lines are optional, they automatically restart the active interface.
+   # snip ------------------------------------
+   iface=$(cat /etc/network/interfaces |grep iface|cut -d" " -f2|sed 's/lo//g')
+   echo "$proname loaded! Restarting $iface"
+   ifdown $iface
+   ifup $iface
+   # ------------------------------------ snap
+}
+
+editprofile()
+{
+   nano /etc/network/interfaces
+}
+
+echo "[s]ave current network profile as ..."
+echo "[l]oad profile from list"
+echo "[e]dit current interfaces file"
+echo "[q]uit"
+
+read -n1 -s sel
+
+if [ $sel = 's' ]; then
+   saveprofile
+elif [ $sel = 'l' ]; then
+   loadprofile
+elif [ $sel = 'q' ]; then
+   exit 0
+elif [ $sel = 'e' ]; then
+   editprofile
+fi
