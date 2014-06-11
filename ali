@@ -1,0 +1,46 @@
+#!/bin/bash
+# ali - populate your .bash_alias quickly
+
+NOR='\033[0m'
+RED='\033[00;31m'
+GREEN='\033[00;32m'
+YELLOW='\033[00;33m'
+
+# make sure we are in the user's home folder
+cd /home/$USER
+
+# check for an existing alias file, usually .bash_alias
+if [ -f /home/$USER/.bash_aliases ]
+then
+   alifile="/home/$USER/.bash_aliases"
+else
+   alifile="/home/$USER/.aliases"
+fi
+
+ali_new()
+{
+    echo "-------------------------------------------"
+    echo -e "Adding aliases to ${GREEN}$alifile ${NOR}"
+    echo "-------------------------------------------"
+    echo -e "Enter alias name - ${YELLOW}ctrl-c to cancel${NOR} :"
+    read a
+    if grep "$a=" $alifile
+    then
+        echo -e "${RED}This alias exists, retry...${NOR}"
+   ali_new
+    else
+        echo "Enter command for $a:"
+        read b
+        newali="alias $a="\"$b\"
+        echo $newali >> $alifile
+    fi
+    read -n1 -p 'More? (Y/n) '
+    if [ $REPLY = 'n' ]; then
+        $SHELL
+        exit 0
+    fi
+    ali_new
+}
+
+# start routine
+ali_new
