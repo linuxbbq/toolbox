@@ -1,0 +1,17 @@
+#!/bin/bash
+if [ -f /usr/bin/less ]; then
+    export PAGER=less
+fi
+
+if [ -z $1 ]; then
+   echo "add a two-digit number, like 'slartie 03'"
+fi
+
+if [ ! -z $1 ]; then
+   URL=http://slartie.com/
+   ISS=issue_00$1
+   TXT=slartie_com_issue_00$1
+   ADR=$URL$ISS/$TXT.txt
+   WGT="wget -q $ADR -O -"
+   $WGT | $PAGER
+fi
