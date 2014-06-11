@@ -1,17 +1,35 @@
 #!/bin/bash
-if [ -f /usr/bin/less ]; then
-    export PAGER=less
+if [ -f /usr/bin/links2 ]; then
+    BROWSER=links2
 fi
+
+if [ -f /usr/bin/w3m ]; then
+    BROWSER=links
+fi
+
+if [ -f /usr/bin/lynx ]; then
+    BROWSER=lynx
+fi
+
+if [ -f /usr/bin/elinks ]; then
+    BROWSER=elinks
+fi
+
+if [ -f /usr/bin/links ]; then
+    BROWSER=links
+fi
+
 
 if [ -z $1 ]; then
    echo "add a two-digit number, like 'slartie 03'"
 fi
 
 if [ ! -z $1 ]; then
-   URL=http://slartie.com/
+   URL=http://slartie.com/issues/
    ISS=issue_00$1
-   TXT=slartie_com_issue_00$1
-   ADR=$URL$ISS/$TXT.txt
-   WGT="wget -q $ADR -O -"
-   $WGT | $PAGER
+   TXT=newsletter-issue-00$1
+   ADR=$URL$TXT
+   $BROWSER $ADR
 fi
+
+
