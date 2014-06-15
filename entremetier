@@ -1,0 +1,27 @@
+# Github repo to build from
+src=https://github.com/linuxbbq/toolbox.git
+ver=201405
+
+# GPG sign package
+sign=no
+export DEBFULLNAME=griller
+export DEBEMAIL=bbq
+
+# Update sources
+if [[ ! -d bbqtools-$ver ]]; then
+   git clone $src && \
+   mv bbqtools bbqtools-$ver && \
+   cd bbqtools-$ver
+else
+   cd bbqtools-$ver && \
+   git pull $src
+fi
+
+dch --local +bbq --distribution unstable "Roasted for LinuxBBQ."
+dh_make --createorig -s
+
+if [[ $sign == yes ]]; then
+  dpkg-buildpackage
+else
+  dpkg-buildpackage -us -uc
+fi
