@@ -1,11 +1,26 @@
 # Github repo to build from
-src=https://github.com/linuxbbq/toolbox.git
+# Needs a matching "debian" folder!
+src=https://github.com/AladW/bbqtools.git
 ver=201405
 
-# GPG sign package
-sign=no
-export DEBFULLNAME=griller
-export DEBEMAIL=bbq
+read -r -p "GPG sign package? [y] [n]" OPTION
+case OPTION in
+   y)
+      sign=yes
+      ;;
+   n)
+      sign=no
+      ;;
+   *)
+      echo "Wrong key mate."
+      exit 1
+      ;;
+esac
+
+read -r -p "Enter your name: " -e -i griller DEBFULLNAME
+read -r -p "Enter your mail: " -e -i bbq DEBEMAIL
+export DEBFULLNAME
+export DEBEMAIL
 
 # Update sources
 if [[ ! -d bbqtools-$ver ]]; then
