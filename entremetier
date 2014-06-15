@@ -4,7 +4,7 @@ src=https://github.com/AladW/bbqtools.git
 ver=201405
 
 read -r -p "GPG sign package? [y] [n]" OPTION
-case OPTION in
+case $OPTION in
    y)
       sign=yes
       ;;
