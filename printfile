@@ -1,0 +1,93 @@
+#!/bin/bash
+#
+# Script to make CLI printing easy.
+
+if [ -z $1 ] ; then
+    echo "no file specified"
+    exit 1
+elif [ ! -e $1 ]; then
+    echo 'file "'$1'" does not exist'
+    exit 1
+elif [ ! -f $1 ] ; then
+    echo '"'$1'" is not a valid file'
+    exit 1
+fi
+
+echo '
+printfile: script to make CLI printing easy
+'
+echo 'available printers:'
+lpstat -a | cut -d ' ' -f 1 > ~/log
+sed '/./=' ~/log | sed '/./N; s/\n/ /' # put the line number at the beginning of every line
+read -p 'enter selection [1-3] > '
+if [[ ! $REPLY =~ ^[1-3]$ ]]; then
+    echo "invalid entry" >&2
+    exit 1
+fi    
+printer=`sed -n ${REPLY}p log | awk '{print $NF}'` # parse selection and keeps only the printer name
+rm ~/log
+
+echo
+read -p 'copies > '
+if [[ $REPLY =~ ^-?[0-9]+$ ]]; then
+    copies=$REPLY
+else
+    echo 'copies must be a number'
+    exit 1
+fi
+
+echo '
+media size [default a4]:
+1 a4
+2 letter
+3 legal'
+read -p 'enter selection [1-3] > '
+case $REPLY in
+1)
+media_size='a4'
+;;
+2)
+media_size='letter'
+;;
+3)
+media_size='legal'
+;;
+'')
+media_size='a4'
+;;
+*)    
+echo "invalid entry" >&2
+exit 1
+;;
+esac
+
+echo '
+orientation [default two-sided-long-edge]: 
+1 one-sided
+2 two-sided-long-edge
+3 two-sided-short-edge'
+read -p 'enter selection [1-3] > '
+case $REPLY in
+1)
+orientation='one-sided'
+;;
+2)
+orientation='two-sided-long-edge'
+;;
+3)
+orientation='two-sided-short-edge'
+;;
+'')
+orientation='two-sided-long-edge'
+;;
+*)
+echo "invalid entry" >&2
+exit 1
+;;
+esac
+
+echo '
+printing "'$1'"...'
+
+#DEBUG echo $printer $copies $media_size $orientation
+lp -d $printer -n $copies -o media=$media_size -o sides=$orientation $1
