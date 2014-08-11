@@ -1,29 +1,19 @@
-#!/bin/bash
+#!/bin/sh
 if [ -f /usr/bin/w3m ]; then
     BROWSER=w3m
-fi
-
-if [ -f /usr/bin/lynx ]; then
+elif [ -f /usr/bin/lynx ]; then
     BROWSER=lynx
-fi
-
-if [ -f /usr/bin/elinks ]; then
+elif [ -f /usr/bin/elinks ]; then
     BROWSER=elinks
-fi
-
-if [ -f /usr/bin/links ]; then
+elif [ -f /usr/bin/links ]; then
     BROWSER=links
-fi
-
-if [ -f /usr/bin/links2 ]; then
+elif [ -f /usr/bin/links2 ]; then
     BROWSER=links2
 fi
 
-if [ -z $1 ]; then
-   echo "add a two-digit number, like 'slartie 03'"
-fi
-
-if [ ! -z $1 ]; then
+if [ -z "$1" ]; then
+   echo "Add a two-digit number, like 'slartie 03'"
+else
    URL=http://slartie.com/issues/
    ISS=issue_00$1
    TXT=newsletter-issue-00$1
