@@ -1,0 +1,65 @@
+#!/bin/bash
+# http://www.sabi.co.uk/Notes/linuxSoundALSA.html
+
+CARDS=($(/usr/bin/aplay -l \
+| awk -F \: '/,/{ print $2 }' \
+| awk -F, '{ print $1 }' \
+| awk -F'[' '{ print $1 }' \
+| uniq))
+
+function is_active() {
+  [[ -f ~/.asoundrc ]] && [[ ! -f ~/.asoundrc.def ]] && {
+     mv ~/.asoundrc ~/.asoundrc.bak
+     > ~/.asoundrc.def
+  }
+}
+
+function set_default() {
+  /usr/bin/aplay -l
+  echo
+  select DEF in "${CARDS[@]}"; do
+     break
+  done
+  [[ -z $DEF ]] && {
+     echo "The strong give up and move away, while the weak give up and stay."
+     exit 1
+  }
+  cat > ~/.asoundrc.def <<EOF
+defaults.pcm.!card $DEF
+defaults.ctl.!card $DEF
+defaults.pcm.!device 0
+defaults.ctl.!device 0
+EOF
+  echo "<$HOME/.asoundrc.def>" > ~/.asoundrc
+  /usr/sbin/alsactl nrestore 2>/dev/null
+}
+
+function reset() {
+  [[ -f ~/.asoundrc.bak ]] && {
+     mv ~/.asoundrc.bak ~/.asoundrc
+  } || rm ~/.asoundrc
+  rm ~/.asoundrc.def
+  /usr/sbin/alsactl nrestore 2>/dev/null
+}
+
+function help() {
+  cat <<EOF
+defsound options:
+- active: Set up ~/.asoundrc
+- default: Choose default sound card
+- reset: Revert configuration
+EOF
+}
+
+case "$1" in
+  default)
+     is_active
+     set_default
+     ;;
+  reset)
+    reset
+     ;;
+  *|help)
+     help
+     ;;
+esac
