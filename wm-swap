@@ -1,0 +1,43 @@
+#/bin/bash
+#
+# This is a tool that will edit you .xinitrc file to comment
+# your current wm, and uncomment your desired wm.
+#
+
+if [ -z $1 ]; then
+	echo "Usage: wm-swap [window manager]"
+	exit 1
+else 
+	WM="$1"
+fi
+
+xinit="/home/$USER/.xinitrc"
+
+if [ -f /home/$USER/$xinit.temp ]; then
+	rm $xinit.temp
+fi
+
+found=0
+
+while read line; do
+	if [[ $line =~ ^exec ]]; then
+		echo $line | sed 's/^/#/' >> $xinit.temp
+	elif [[ $line =~ $WM ]]; then
+		echo $line | sed 's/#//' >> $xinit.temp
+		found=1
+	else
+		echo $line >> $xinit.temp
+	fi
+done < $xinit
+
+if [ $found == 0 ]; then
+	echo "exec $WM" >> $xinit.temp
+fi
+
+cp $xinit.temp $xinit
+rm $xinit.temp
+
+## optional
+# pkill x
+
+exit 0
