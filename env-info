@@ -6,7 +6,7 @@
 # this script is provided with NO GUARANTEE and NO SUPPORT 
 # if it breaks or does not do what you want, FIX IT YOURSELF
 
-VERSION="4.0"   # updated for changes to free -m
+VERSION="4.0"   # 13 July 2016
 
 # wm array -- add any that need to be recognized
 wms=( 2bwm 2wm 9wm aewm afterstep ahwm alopex amiwm antiwm awesome blackbox bspwm catwm clfswm ctwm cwm dminiwm dragonflywm dwm echinus \
