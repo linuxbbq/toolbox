@@ -1,0 +1,205 @@
+#!/bin/bash
+
+# debian kernel installer script
+# no guarantees, no support
+
+SCRIPT="get-kernel"
+VERSION="1.0.1"
+DEBUG=1 	# set to zero to disable all debug output
+ROLLING=0	# set to zero to show all kernels (gets set in choose-kernel-list)
+
+GET_SIDUX=1	# set to zero to never get siduction sources
+GET_LQRX=1	# set to zero to never get liquorix sources
+
+SIDUX_FILE="/etc/apt/sources.list.d/kernel-sources-siduction.list"
+SIDUX_SOURCE="deb http://packages.siduction.org/base unstable main"
+
+LQRX_FILE="/etc/apt/sources.list.d/kernel-sources-liquorix.list"
+LQRX_SOURCE="deb http://liquorix.net/debian sid main"
+
+debug-wait() { # $1 is debug level; 1 is mild, 2 is all
+	if [ $1 -le $DEBUG ]; then
+		echo
+		read -n1 -p "press any key to continue"
+	fi
+}
+
+debug-echo() {
+	if [ $1 -le $DEBUG ]; then
+		shift
+		echo "DEBUG: $@"
+		read -n1 -p "press any key to continue"
+	fi
+}
+
+yna() {
+    while true; do
+        read -n1 -p "$1 (y/n/q) "
+        echo
+        case $REPLY in
+            [qQ]* )
+                echo -e 'abort\n'
+                exit 1;;
+            [yY]* )
+                return 0;;
+            [nN]* )
+                return 1;;
+            * )
+                echo 'please answer y/n/q';;
+        esac
+    done
+}
+
+choose-kernel-list() {
+	while true; do
+		read -n1 -p "enter 0 to see all available kernels, 1 for only latest rolling kernels: "
+		echo
+		if [[ $REPLY = 1 || $REPLY = 0 ]]; then
+			ROLLING=$REPLY
+			return
+		else
+			echo "please enter 0 or 1"
+		fi
+	done
+}
+
+error-exit() {
+	echo -e "\nERROR: $@\n"
+	rm $tmpfile
+	exit 1
+}
+
+error-test() {	# $1 is fail message
+	[[ $? != 0 ]] && error-exit "$1"
+}
+
+add-source() { # $1 is search string, $2 is sources file name, $3 is sources content, $4 is get/not
+	echo -e "\nyour available kernel list does not contain any $1 kernels"
+	if [ $4 = 0 ]; then
+		echo "you have elected to omit $1 sources"
+		return
+	fi
+	if yna "add $1 sources? (this will force an apt-get update)"; then
+		echo -e "\nadding $1 sources (creating $2)"
+		UPDATE=1
+		if [ -e $2 ]; then
+			echo "WARNING: source list file $2 already exists; appending to it"
+		else
+			echo "# this file was created automatically by the $SCRIPT script" | sudo tee "$2" 1>/dev/null
+			echo -e "# NOT EDIT THIS FILE -- any changes may be overwritten\n" | sudo tee -a "$2" 1>/dev/null
+		fi
+		echo "$3" | sudo tee -a "$2" 1>/dev/null
+	fi
+}
+
+build-available-list() { # $ROLLING is 1 to build rolling list, 0 to build all available
+	if [ $ROLLING = 1 ]; then
+		n=0
+		for k in ${rlist[@]}; do 	# check rlist with apt-cache, only use those found
+			if [[ $(apt-cache search $k) != "" ]]; then
+				alist[n]=$k
+				let n+=1
+			fi
+		done
+	else	# use all available in apt-cache search
+		alist=( $(apt-cache search linux-image | awk '/image/ && !/dbg/ {print $1}' | egrep "$arch") )
+	fi
+	debug-echo 2 "alist = ${alist[@]}"
+	debug-echo 2 "ilist = ${ilist[@]}"
+	for i in ${ilist[@]}; do		# remove installed kernels from 
+		alist=( ${alist[@]/"$i"/} )	# list of available kernels
+	done
+	debug-echo 2 "alist = ${alist[@]}"
+}
+
+echo -e "\n$SCRIPT kernel-installer script v$VERSION \n"
+tmpfile=$(mktemp)
+if ! dpkg -l dialog | egrep -q '^ii' ; then
+    error-exit 'you must install the dialog package to use this script'
+fi
+
+arch=$(uname -m)	# get architecture from running kernel; populate list of rolling kernels
+if [ $arch = 'i686' ]; then	
+	arch="486|686"	
+	rlist=( linux-image-486 linux-image-686 linux-image-686-pae linux-image-siduction-686 linux-image-siduction-686-pae linux-image-liquorix-686 )
+elif [ $arch = 'x86_64' ]; then
+	arch="amd64"
+	rlist=( linux-image-amd64 linux-image-siduction-amd64 linux-image-liquorix-amd64 )
+else
+	error-exit "uname -m returned $arch -- unknown architecture"
+fi
+
+choose-kernel-list	# rolling or all? set $ROLLING variable
+
+if yna "run apt-get update first? (recommended but not required)"; then
+	echo -e "\nrunning apt-get update"
+	sudo apt-get update
+	error-test "apt-get update failed"
+fi
+
+echo -e "\nbuilding installed kernel list"	# build list of installed kernels from dpkg
+ilist=$(dpkg -l "linux-image*" | awk '/^ii/ {print $2}')
+error-test "dpkg -l failed"
+
+echo "building available kernel list"	
+build-available-list
+
+UPDATE=0	# if siduction or liquorix not available, offer to add the sources
+[[ ! ${alist[@]} =~ "siduction" ]] && add-source "siduction" "$SIDUX_FILE" "$SIDUX_SOURCE" $GET_SIDUX
+[[ ! ${alist[@]} =~ "liquorix" ]] && add-source "liquorix" "$LQRX_FILE" "$LQRX_SOURCE" $GET_LQRX
+debug-wait 1
+
+if [ $UPDATE = 1 ]; then	# new sources were added, update is required
+	echo -e "\nrunning apt-get update (forced by sources change)"
+	sudo apt-get update
+	error-test "apt-get update failed"
+	echo -e "\nrebuilding available kernel list"
+	build-available-list
+	debug-wait 1
+fi
+
+let num=${#alist[*]}-1		
+[[ $num = -1 ]] && error-exit "no uninstalled kernels are available"
+
+for i in $(seq 0 $num); do	# build array in dialog format
+	blist[i]="$i ${alist[i]}"
+done
+
+while true; do
+	dialog --no-tags --menu 'please select a kernel to install' 50 50 50 ${blist[*]} 2>$tmpfile
+	if [ $? = 1 ]; then		# user chose cancel
+		clear
+		if yna "quit script?"; then
+			echo -e "abort\n"
+			exit 1
+		fi
+	else	# user chose something in the list
+		break
+	fi
+done
+
+kernel=${alist[$(<$tmpfile)]}	# index into the array to get the selected kernel
+[[ $kernel = "" ]] && error-exit "selected kernel string is empty"
+headers=$(echo $kernel | sed s/image/headers/)	# make the header package name
+
+clear
+echo "$kernel selected"
+echo "looking for headers"
+if [[ $(apt-cache policy $headers) != ""  ]]; then
+	! yna "found $headers; install this too?" && headers=""
+else
+	if ! yna "$headers not found for this kernel; install kernel anyway?"; then
+		error-exit "headers not found"
+	fi
+	headers=""
+fi
+
+if yna "install $kernel $headers -- are you sure?"; then
+	echo "installing $kernel $headers"
+	sudo apt-get install $kernel $headers
+	error-test "apt-get install failed"
+fi
+
+rm $tmpfile
+echo -e "\ndone\n"
+exit 0
